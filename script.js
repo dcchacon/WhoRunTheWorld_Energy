@@ -20,62 +20,67 @@ var MWproduction
 var stationID
 
 // Grab geoJson data and create the map
-d3.json(url, function (response) {
+d3.json(url).then(function (response) {
   L.geoJson(response, {
-    onEachFeature: function (feature, layer) {
-      layer.bindPopup("Plant Label: " + feature.properties.Plant_Label + "<br>");
+    onEachFeature: function (features, layer) {
+      layer.bindPopup("Plant Label: " + features.properties.Plant_Label + "<br>");
+      // Uncomment console.log to see data
       // console.log(response)
-      onlineyear = feature.properties.Online_Year;
-      energy_type = feature.properties.General_Fuel;
-      MWproduction = feature.properties.MW;
-      stationID = feature.properties.Plant_ID;
-
-      // var yticks = count(stationID).groupby(energy_type, onlineyear)
-      // console.log(onlineyear)
     }
-
-
   }).addTo(myMap)
 });
 
-function createBubblechart(onlineyear, energy_type, MWproduction, stationID) {
-
-  // L.geoJson(data, {
-  //   onEachFeature: function (feature) {
-  //     // var onlineyear = feature.properties.Online_Year;
-  //     // var energy_type = feature.properties.General_Fuel;
-  //     // var MWproduction = feature.properties.MW;
-  //     // var stationID = feature.properties.Plant_ID;
-
-  //     // var yticks = count(stationID).groupby(energy_type, onlineyear)
-
-  //     console.log(data)
-  //   }
-  // })
-
-  var trace2 = {
-
-    x: onlineyear,
-    y: MWproduction,
-    mode: "markers",
-    marker: {
-      size: MWproduction,
-      color: energy_type
-    }
-  };
-
-  var trace2data = [trace2]
-
-  var layout2 = {
-    title: "Historical Energy Production",
-    margin: { t: 0 },
-    hovermode: "closest",
-    xaxis: { title: "Online Year" },
-    margin: { t: 30 }
-  };
 
 
-  Plotly.newPlot("bubble", trace2data, layout2);
+function createBubblechart() {
+  d3.json(url).then(function (response) {
+    L.geoJson(response, {
+      onEachFeature: function (features, layer) {
+        var onlineyear = features.properties.Online_Year;
+        var energy_type = features.properties.General_Fuel;
+        var MWproduction = features.properties.MW;
+        var stationID = features.properties.Plant_ID;
+        console.log(onlineyear)
+      
+        // Group by documentation http://learnjsdata.com/group_data.html
 
-};
-createBubblechart(onlineyear, energy_type, MWproduction, stationID)
+        var stationIDcount = d3.nest()
+          .key(function (d) { return d.Plant_ID; })
+          .rollup(function (v) { return v.length; })
+          .entries(features.properties);
+        // console.log(JSON.stringify(stationIDcount)),
+
+        var MWproductionSum = d3.nest()
+          .key(function (d) { return d.Plant_ID; })
+          .rollup(function (v) { return v.sum; })
+          .entries(features.properties);
+
+        var trace2 = {
+
+          x: onlineyear,
+          y: stationIDcount,
+          mode: "markers",
+          marker: {
+            size: MWproductionSum,
+            color: energy_type
+          }
+        };
+
+        var trace2data = [trace2]
+
+        var layout2 = {
+          title: "Historical Energy Production",
+          margin: { t: 0 },
+          hovermode: "closest",
+          xaxis: { title: "Online Year" },
+          margin: { t: 30 }
+        };
+
+
+        Plotly.newPlot("bubble", trace2data, layout2);
+
+      }
+    });
+  });
+}
+createBubblechart()
